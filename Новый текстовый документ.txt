@@ -1,0 +1,255 @@
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import javanet.staxutils.IndentingXMLStreamWriter;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Created by class on 20.04.2022.
+ */
+public class MainClass {
+    public static void main(String[] args) throws IOException, XMLStreamException {
+        Document doc = Jsoup.connect("https://www.sport-express.ru/olympics/beijing2022/").get();
+        Elements elements = doc.getElementsByClass("se-material__title").select("a[href]");
+
+        List<String> links = new ArrayList<>();
+
+        for (int i = 0; i < elements.size(); i++) {
+            links.add(elements.get(i).attr("href"));
+        }
+
+        ArrayList<News> newses = new ArrayList<News>();
+        String head;
+        String date;
+        String correspondent;
+        for (int i = 0; i < links.size(); i++) {
+            Document document = Jsoup.connect(links.get(i)).get();
+            head = document.getElementsByClass("se-material-page__title").text();
+            date = document.getElementsByClass("se-material-page__date").text();
+            correspondent = document.getElementsByClass("se-author-widget__name").text();
+            if (!date.isEmpty()) {
+                int day = Integer.parseInt(date.split(" ")[0].trim());
+                int month = getMonth(date.split(",")[0].trim().split(" ")[1]);
+                int hours = Integer.parseInt(date.split(" ")[2].trim().split(":")[0]);
+                int min = Integer.parseInt(date.split(" ")[2].trim().split(":")[1]);
+                newses.add(new News(new Date(2022, month, day, hours, min), correspondent, head));
+            }
+        }
+        //newses.forEach(System.out::println);
+
+        ArrayList<DateNews> dateNews = new ArrayList<DateNews>();
+        List<Date> dates = new ArrayList<>();
+
+        for (int i = 0; i < newses.size(); i++) {
+            dates.add(newses.get(i).getDate());
+        }
+
+        dates = dates.stream().distinct().collect(Collectors.toList());
+
+        for (int i = 0; i < dates.size(); i++) {
+            dateNews.add(new DateNews(dates.get(i)));
+        }
+
+        dateNews.forEach(System.out::println);
+
+        for (int i = 0; i < newses.size(); i++) {
+            for (int j = 0; j < dateNews.size(); j++) {
+                if (newses.get(i).getDate().equals(dateNews.get(j).getDate())) {
+                    dateNews.get(j).getNewses().add(newses.get(i));
+                }
+            }
+        }
+        dateNews.forEach(System.out::println);
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonString = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(dateNews);
+
+        mapper.writerWithDefaultPrettyPrinter().writeValue(new File("output.json"), dateNews);
+        System.out.println(jsonString);
+
+//
+//        XMLOutputFactory output = XMLOutputFactory.newInstance();
+//        XMLStreamWriter writer = new IndentingXMLStreamWriter(output.createXMLStreamWriter(new FileOutputStream("ooot.xml")));
+//        writer.writeStartDocument("utf-8", "1.0");
+//
+//        writer.writeStartElement("news");
+
+
+//        System.out.println(new Date(2022,03,15,13,10));
+//        System.out.println("6 марта, 13:14".split(",")[0].trim().split(" ")[1]);
+//     System.out.println("6 марта, 13:14".split(" ")[0].trim());
+//  System.out.println("6 марта, 13:14".split(" ")[2].trim().split(":")[0]);
+
+    }
+
+
+
+
+    public static int getMonth(String month) {
+        month = month.toLowerCase();
+        if (month == "января") {
+            return 1;
+        }
+
+        if (month == "февраля") {
+            return 2;
+        }
+
+        if (month == "марта") {
+            return 3;
+        }
+
+        if (month == "апреля") {
+            return 4;
+        }
+
+        if (month == "мая") {
+            return 5;
+        }
+
+        if (month == "июня") {
+            return 6;
+        }
+
+        if (month == "июля") {
+            return 7;
+        }
+
+        if (month == "августа") {
+            return 8;
+        }
+
+        if (month == "сентября") {
+            return 9;
+        }
+        if (month == "октября") {
+            return 10;
+        }
+
+        if (month == "ноября") {
+            return 11;
+        }
+
+        if (month == "декабря") {
+            return 12;
+        }
+
+        return 0;
+    }
+
+}
+
+
+import java.time.LocalDate;
+import java.util.Date;
+
+/**
+ * Created by class on 20.04.2022.
+ */
+public class News {
+    private Date date;
+    private String correspondent;
+    private String head;
+
+    public News(Date date, String correspondent, String head) {
+        this.date = date;
+        this.correspondent = correspondent;
+        this.head = head;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public String getCorrespondent() {
+        return correspondent;
+    }
+
+    public void setCorrespondent(String correspondent) {
+        this.correspondent = correspondent;
+    }
+
+    public String getHead() {
+        return head;
+    }
+
+    public void setHead(String head) {
+        this.head = head;
+    }
+
+    @Override
+    public String toString() {
+        return "News{" +
+                "date='" + date + '\'' +
+                ", correspondent='" + correspondent + '\'' +
+                ", head='" + head + '\'' +
+                '}';
+    }
+}
+
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Date;
+
+/**
+ * Created by class on 20.04.2022.
+ */
+public class DateNews {
+    private Date date;
+    private ArrayList<News> newses = new ArrayList<>();
+
+    public DateNews() {
+    }
+
+    public DateNews(Date date, ArrayList<News> newses) {
+        this.date = date;
+        this.newses = newses;
+    }
+
+    public DateNews(Date date) {
+        this.date = date;
+    }
+
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public ArrayList<News> getNewses() {
+        return newses;
+    }
+
+    public void setNewses(ArrayList<News> newses) {
+        this.newses = newses;
+    }
+
+    @Override
+    public String toString() {
+        return "DateNews{" +
+                "date=" + date +
+                ", newses=" + newses +
+                '}' + "\n";
+    }
+}
+
